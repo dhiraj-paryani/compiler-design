@@ -76,12 +76,29 @@ public class Scanner {
 	 * @return
 	 */
 	public String getText(Token token) {
-		/* IMPLEMENT THIS */
 		StringBuilder sb = new StringBuilder();
-		for(int i=0; i < token.length; i++) {
-			sb.append(chars[token.pos() + i]);
+		switch (token.kind) {
+			case STRINGLIT -> {
+				boolean isPreviousBackSlash = false;
+				for(int i=1; i < token.length - 1; i++) {
+					if (isPreviousBackSlash) {
+						sb.append(escapeSuffixToEscapeSequence.get(chars[token.pos() + i]));
+						isPreviousBackSlash = false;
+					} else if (chars[token.pos() + i] == '\\') {
+						isPreviousBackSlash = true;
+					} else {
+						sb.append(chars[token.pos() + i]);
+					}
+				}
+				return sb.toString();
+			}
+			default -> {
+				for(int i=0; i < token.length; i++) {
+					sb.append(chars[token.pos() + i]);
+				}
+				return sb.toString();
+			}
 		}
-		return sb.toString();
 	}
 
 
@@ -128,6 +145,7 @@ public class Scanner {
 
 
 	public Scanner scan() throws LexicalException {
+		// Initialization
 		int pos = 0;
 		int line = 1;
 		int posInLine = 1;
@@ -141,7 +159,7 @@ public class Scanner {
 		StringBuffer currentIdentifier = null;
 		StringBuffer currentSymbol = null;
 
-		boolean isEOFReached = false;
+		// Process each character at a time.
 		while (pos < chars.length) {
 			char currentChar = chars[pos];
 
@@ -173,9 +191,9 @@ public class Scanner {
 						state = State.SYMBOL;
 					} else if (isEOFChar(currentChar)) {
 						state = State.EOF;
-					}
-					else if (currentChar != 0) {
-						throw new LexicalException("", pos);
+					} else {
+						throw new LexicalException(
+								"Unable to process character at position " + pos + " int start state", pos);
 					}
 				}
 				// Handle START state -- END
@@ -191,7 +209,7 @@ public class Scanner {
 
 				// Handle COMMENT state -- START
 				case COMMENT -> {
-					if (isLineTerminator(currentChar)) {
+					if (isLineTerminator(currentChar) || isEOFChar(currentChar)) {
 						state = State.START;
 					} else {
 						pos++; posInLine++;
@@ -250,6 +268,8 @@ public class Scanner {
 					if (isEscapeSequenceSuffix(currentChar)) {
 						pos++; posInLine++;
 						state = State.STRING_LIT;
+					} else {
+						throw new LexicalException("Unable to process escape suffix inside string literal", pos);
 					}
 				}
 
@@ -268,7 +288,7 @@ public class Scanner {
 							pos++; posInLine++;
 					} else {
 						throw new LexicalException(
-								"Unable to scan string literal due to invalid input character", pos);
+								"Unable to scan string literal due to invalid input character at position " + pos, pos);
 					}
 				}
 				// Handle STRING_LIT state -- END
@@ -399,7 +419,7 @@ public class Scanner {
 	}
 
 	private static boolean isIdentifierPart(char c) {
-		return isIdentifierStart(c) || Character.isDigit(c);
+		return isIdentifierStart(c) || isDigit(c);
 	}
 
 	private static boolean isZeroDigit(char c) {
@@ -419,7 +439,7 @@ public class Scanner {
 	}
 
 	private static boolean isInputCharacter(char c) {
-		return isRawInputCharacter(c) && c != '\n' && c != '\r';
+		return isRawInputCharacter(c) && !isLineTerminator(c);
 	}
 
 	private static boolean isStringStartCharacter(char c) {
@@ -445,6 +465,17 @@ public class Scanner {
 		return c == EOFChar;
 	}
 
+
+	private static final Map<Character, Character> escapeSuffixToEscapeSequence = Map.ofEntries(
+			entry('n', '\n'),
+			entry('b', '\b'),
+			entry('t', '\t'),
+			entry('f', '\f'),
+			entry('r', '\r'),
+			entry('"', '\"'),
+			entry('\'', '\''),
+			entry('\\', '\\')
+	);
 	/**
 	 * precondition:  This Token is an INTLIT or CONST
 	 * @throws LexicalException
@@ -452,14 +483,12 @@ public class Scanner {
 	 * @returns the integer value represented by the token
 	 */
 	public int intVal(Token t) throws LexicalException {
-		/* IMPLEMENT THIS */
 		StringBuilder sb = new StringBuilder();
 		for(int i=0; i < t.length; i++) {
 			sb.append(chars[t.pos() + i]);
 		}
 		switch (t.kind) {
 			case INTLIT -> {
-
 				return Integer.parseInt(sb.toString());
 			}
 			case CONST -> {
@@ -502,7 +531,7 @@ public class Scanner {
 	 * HashSet containing the values of the predefined symbols.
 	 */
 	private static final HashSet<Character> symbols = new HashSet<>(Arrays.asList(
-			'(', ')', '[', ']', ';', ',', '<', '=', '>', '<', '!', '?', ':', '!', '?', '+', '-', '*', '/', '%', '@',
+			'(', ')', '[', ']', ';', ',', '<', '=', '>', '!', '?', ':', '+', '-', '*', '/', '%', '@',
 			'#', '&', '|'
 	));
 
@@ -523,35 +552,37 @@ public class Scanner {
 	);
 
 	private static final Map<String, Kind> symbolToKind = Map.ofEntries(
-			entry("(", Kind.LPAREN),
-			entry(")", Kind.RPAREN),
-			entry("[", Kind.LSQUARE),
-			entry("]", Kind.RSQUARE),
+			entry("(", Kind.LPAREN), entry(")", Kind.RPAREN),
+
+			entry("[", Kind.LSQUARE), entry("]", Kind.RSQUARE),
+
 			entry(";", Kind.SEMI),
 			entry(",", Kind.COMMA),
-			entry("<<", Kind.LPIXEL),
-			entry(">>", Kind.RPIXEL),
+
+			entry("<<", Kind.LPIXEL), entry(">>", Kind.RPIXEL),
+
 			entry("=", Kind.ASSIGN),
-			entry(">", Kind.GT),
-			entry("<", Kind.LT),
+
+			entry(">", Kind.GT), entry("<", Kind.LT),
+
 			entry("!", Kind.EXCL),
 			entry("?", Kind.Q),
 			entry(":", Kind.COLON),
-			entry("==", Kind.EQ),
-			entry("!=", Kind.NEQ),
-			entry("<=", Kind.GE),
-			entry(">=", Kind.LE),
-			entry("+", Kind.PLUS),
-			entry("-", Kind.MINUS),
-			entry("*", Kind.STAR),
-			entry("/", Kind.DIV),
-			entry("%", Kind.MOD),
-			entry("->", Kind.RARROW),
-			entry("<-", Kind.LARROW),
+
+			entry("==", Kind.EQ), entry("!=", Kind.NEQ),
+
+			entry(">=", Kind.GE), entry("<=", Kind.LE),
+
+			entry("+", Kind.PLUS), entry("-", Kind.MINUS),
+
+			entry("*", Kind.STAR), entry("/", Kind.DIV), entry("%", Kind.MOD),
+
+			entry("->", Kind.RARROW), entry("<-", Kind.LARROW),
+
 			entry("@", Kind.AT),
 			entry("#", Kind.HASH),
-			entry("&", Kind.AND),
-			entry("|", Kind.OR)
+
+			entry("&", Kind.AND), entry("|", Kind.OR)
 	);
 
 	/**

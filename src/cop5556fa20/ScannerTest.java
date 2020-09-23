@@ -158,16 +158,235 @@ class ScannerTest {
 	}
 
 	@Test
-	public void test1() throws LexicalException {
+	public void commentAtTheEnd() throws LexicalException {
 		String input = """
-    			// abcdfashdkfhjasd sdfasf asfsdf sdas// sadfasdfasfasdfas ++123$
-				int a = "b";
-				123423 green (GREEN)
-				;;
-				123423
-				====""";
+				// This is comment...""";
 		Scanner scanner = new Scanner(input).scan();
 		show(input);
+		show(scanner);
+		checkNextIsEOF(scanner);
+	}
+
+	@Test
+	public void stringLiteralNotEnd() throws LexicalException {
+		String input = """
+				"This is string literal...""";
+		show(input);
+		Exception exception = assertThrows(LexicalException.class, () -> {new Scanner(input).scan();});
+		show(exception);
+	}
+
+	@Test
+	public void stringLiteralContainsLineTerminator() throws LexicalException {
+		String input = """
+				"This is string literal...
+				This is string literal Continued" Here 123 int
+				""";
+		show(input);
+		Exception exception = assertThrows(LexicalException.class, () -> {new Scanner(input).scan();});
+		show(exception);
+	}
+
+	@Test
+	public void stringLiteralContainsOddDoubleQuotes() throws LexicalException {
+		String input = """
+				"This is string literal"This is string literal Continued"
+				""";
+		show(input);
+		Exception exception = assertThrows(LexicalException.class, () -> {new Scanner(input).scan();});
+		show(exception);
+	}
+
+
+	@Test
+	public void intOutsideLimit() throws LexicalException {
+		String input = """
+				9147483649 0
+				""";
+		show(input);
+		Exception exception = assertThrows(LexicalException.class, () -> {new Scanner(input).scan();});
+		show(exception);
+	}
+
+	@Test
+	public void zeroEOF() throws LexicalException {
+		String input = """
+				0""";
+
+		Scanner scanner = new Scanner(input).scan();
+		show(input);
+		show(scanner);
+		checkNext(scanner, INTLIT, 0, 1, 1, 1);
+		checkNextIsEOF(scanner);
+	}
+
+	@Test
+	public void nonZeroEOF() throws LexicalException {
+		String input = """
+				12320""";
+
+		Scanner scanner = new Scanner(input).scan();
+		show(input);
+		show(scanner);
+		Token t = checkNext(scanner, INTLIT, 0, 5, 1, 1);
+		int actual = scanner.intVal(t);
+		int expected = 12320;
+		assertEquals(expected, actual);
+		checkNextIsEOF(scanner);
+	}
+
+	@Test
+	public void symbolsEOF() throws LexicalException {
+		String input = """
+    			===>=<=/%<!=""";
+
+		Scanner scanner = new Scanner(input).scan();
+		show(input);
+		show(scanner);
+
+		int actualNumTokens = 0;
+		while(scanner.hasTokens()) {
+			scanner.nextToken();
+			actualNumTokens++;
+		}
+		assertEquals(actualNumTokens, 9);
+	}
+
+	@Test
+	public void notASCIIInsideStringLiteral() throws LexicalException {
+		String input= """
+    			"भारत"
+				""";
+		show(input);
+		Exception exception = assertThrows(LexicalException.class, () -> {new Scanner(input).scan();});
+		show(exception);
+	}
+
+	@Test
+	public void notASCIIIAtStartState() throws LexicalException {
+		String input= """
+    			भारत
+				""";
+		show(input);
+		Exception exception = assertThrows(LexicalException.class, () -> {new Scanner(input).scan();});
+		show(exception);
+	}
+
+	@Test
+	public void getTextWithStringLiteral() throws LexicalException {
+		String input = """
+				"this is string literal"    	
+				""";
+
+		Scanner scanner = new Scanner(input).scan();
+		show(input);
+		show(scanner);
+
+		Token t = checkNext(scanner, STRINGLIT, 0, 24, 1, 1);
+		String actual = scanner.getText(t);
+		String expected = "this is string literal";
+
+		assertEquals(expected, actual);
+	}
+
+	@Test
+	public void getTextWithStringLiteralContainingEscapeCharacters() throws LexicalException {
+		String input = """
+				"this is \\t string literal"    	
+				""";
+
+		show(input);
+		Scanner scanner = new Scanner(input).scan();
+		show(scanner);
+
+		Token t = checkNext(scanner, STRINGLIT, 0, 27, 1, 1);
+		String actual = scanner.getText(t);
+		String expected = "this is \t string literal";
+
+		assertEquals(expected, actual);
+	}
+
+	@Test
+	public void getTextWithKeyword() throws LexicalException {
+		String input = """
+				int
+				WHITE    	
+				""";
+		show(input);
+		Scanner scanner = new Scanner(input).scan();
+		show(scanner);
+		Token t = checkNext(scanner, KW_int, 0, 3, 1, 1);
+		assertEquals("int", scanner.getText(t));
+		t = checkNext(scanner, CONST, 4, 5, 2, 1);
+		assertEquals("WHITE", scanner.getText(t));
+	}
+
+	@Test
+	public void checkBackSlash() throws LexicalException {
+		String input = """
+				"a\\\\b"
+				""";
+		String testOP = "a\\b";
+
+		show(input);
+		Scanner scanner = new Scanner(input).scan();
+		show(scanner);
+
+		Token t0 = scanner.nextToken();
+
+		assertEquals(testOP, scanner.getText(t0));
+	}
+
+	@Test
+	public void checkBackSlashB() throws LexicalException {
+		String input = """
+				"a\\bc"
+				""";
+		String testOP = "a\bc";
+
+		show(input);
+		Scanner scanner = new Scanner(input).scan();
+		show(scanner);
+
+		Token t0 = scanner.nextToken();
+
+		assertEquals(testOP, scanner.getText(t0));
+	}
+
+	@Test
+	public void checkStringLiteralWithEscapeF() throws LexicalException {
+		String input = """
+				"This is StringLit\\f"
+				""";
+		String expected = "This is StringLit\f";
+
+		show(input);
+		Scanner scanner = new Scanner(input).scan();
+		show(scanner);
+
+		Token t0 = scanner.nextToken();
+
+		assertEquals(expected, scanner.getText(t0));
+	}
+
+	@Test
+	public void notASymbolError() throws LexicalException {
+		String input= """
+    			^
+				""";
+		show(input);
+		Exception exception = assertThrows(LexicalException.class, () -> {new Scanner(input).scan();});
+		show(exception);
+	}
+
+	@Test
+	public void testComment() throws LexicalException {
+		String input= """
+    			aaaaa//comment\n1234//comment\r\nbbbb
+				""";
+		show(input);
+		show(input);
+		Scanner scanner = new Scanner(input).scan();
 		show(scanner);
 	}
 }
