@@ -1,13 +1,13 @@
 /**
- * Scanner for the class project in COP5556 Programming Language Principles 
+ * Scanner for the class project in COP5556 Programming Language Principles
  * at the University of Florida, Fall 2020.
- * 
- * This software is solely for the educational benefit of students 
- * enrolled in the course during the Fall 2020 semester.  
- * 
+ *
+ * This software is solely for the educational benefit of students
+ * enrolled in the course during the Fall 2020 semester.
+ *
  * This software, and any software derived from it,  may not be shared with others or posted to public web sites,
  * either during the course or afterwards.
- * 
+ *
  *  @Beverly A. Sanders, 2020
  *
  */
@@ -18,10 +18,10 @@ import java.util.*;
 import static java.util.Map.entry;
 
 public class Scanner {
-	private char[] chars;
-	private final char EOFChar = 0;
+	private final char[] chars;
 	State state = State.START;
-	
+	private static final char EOFChar = 0;
+
 	@SuppressWarnings("preview")
 	public record Token(
 		Kind kind,
@@ -31,7 +31,7 @@ public class Scanner {
 		int posInLine //position in line of source.  Starts at 1
 		) {
 	}
-	
+
 	@SuppressWarnings("serial")
 	public static class LexicalException extends Exception {
 		int pos;
@@ -41,66 +41,76 @@ public class Scanner {
 		}
 		public int pos() { return pos; }
 	}
-	
-	
+
+
 	public static enum Kind {
 		IDENT, INTLIT, STRINGLIT, CONST,
-		KW_X/* X */,  KW_Y/* Y */, KW_WIDTH/* width */,KW_HEIGHT/* height */, 
+		KW_X/* X */,  KW_Y/* Y */, KW_WIDTH/* width */,KW_HEIGHT/* height */,
 		KW_SCREEN/* screen */, KW_SCREEN_WIDTH /* screen_width */, KW_SCREEN_HEIGHT /*screen_height */,
 		KW_image/* image */, KW_int/* int */, KW_string /* string */,
 		KW_RED /* red */,  KW_GREEN /* green */, KW_BLUE /* blue */,
-		ASSIGN/* = */, GT/* > */, LT/* < */, 
-		EXCL/* ! */, Q/* ? */, COLON/* : */, EQ/* == */, NEQ/* != */, GE/* >= */, LE/* <= */, 
-		AND/* & */, OR/* | */, PLUS/* + */, MINUS/* - */, STAR/* * */, DIV/* / */, MOD/* % */, 
-	    AT/* @ */, HASH /* # */, RARROW/* -> */, LARROW/* <- */, LPAREN/* ( */, RPAREN/* ) */, 
+		ASSIGN/* = */, GT/* > */, LT/* < */,
+		EXCL/* ! */, Q/* ? */, COLON/* : */, EQ/* == */, NEQ/* != */, GE/* >= */, LE/* <= */,
+		AND/* & */, OR/* | */, PLUS/* + */, MINUS/* - */, STAR/* * */, DIV/* / */, MOD/* % */,
+	    AT/* @ */, HASH /* # */, RARROW/* -> */, LARROW/* <- */, LPAREN/* ( */, RPAREN/* ) */,
 		LSQUARE/* [ */, RSQUARE/* ] */, LPIXEL /* << */, RPIXEL /* >> */,  SEMI/* ; */, COMMA/* , */,  EOF
 	}
 
 	private enum State {
-		START, SYMBOL, STRING_LIT, IDENTIFIER_PART, DIGIT, COMMENT
+		START, SYMBOL,
+		STRING_LIT_START, STRING_LIT, STRING_LIT_END, STRING_LIT_ESCAPE_PREFIX, STRING_LIT_ESCAPE_SUFFIX,
+		IDENTIFIER_PART,
+		ZERO_DIGIT, DIGIT,
+		COMMENT,
+		WHITE_SPACE, LINE_TERMINATOR,
+		EOF
 	}
-	
+
 
 	/**
 	 * Returns the text of the token.  If the token represents a String literal, then
 	 * the returned text omits the delimiting double quotes and replaces escape sequences with
 	 * the represented character.
-	 * 
+	 *
 	 * @param token
 	 * @return
 	 */
 	public String getText(Token token) {
 		/* IMPLEMENT THIS */
-		return null;
+		StringBuilder sb = new StringBuilder();
+		for(int i=0; i < token.length; i++) {
+			sb.append(chars[token.pos() + i]);
+		}
+		return sb.toString();
 	}
-	
-	
+
+
 	/**
 	 * Returns true if the internal interator has more Tokens
-	 * 
+	 *
 	 * @return
 	 */
 	public boolean hasTokens() {
 		return nextTokenPos < tokens.size();
 	}
-	
+
 	/**
 	 * Returns the next Token and updates the internal iterator so that
 	 * the next call to nextToken will return the next token in the list.
-	 * 
+	 *
 	 * Precondition:  hasTokens()
 	 * @return
 	 */
 	public Token nextToken() {
 		return tokens.get(nextTokenPos++);
 	}
-	
+
 
 	/**
 	 * The list of tokens created by the scan method.
 	 */
 	private final ArrayList<Token> tokens = new ArrayList<Token>();
-	
+
 
 	/**
 	 * position of the next token to be returned by a call to nextToken
@@ -111,12 +121,12 @@ public class Scanner {
 		int len = inputString.length();
 
 		// Input char array terminated with EOFchar of convenience.
-		chars = new char[len + 1];
+		chars = Arrays.copyOf(inputString.toCharArray(), len + 1);
 		chars[len] = EOFChar;
 	}
-	
 
-	
+
+
 	public Scanner scan() throws LexicalException {
 		int pos = 0;
 		int line = 1;
@@ -131,79 +141,149 @@ public class Scanner {
 		StringBuffer currentIdentifier = null;
 		StringBuffer currentSymbol = null;
 
-		while (pos < chars.length - 1) {
+		boolean isEOFReached = false;
+		while (pos < chars.length) {
 			char currentChar = chars[pos];
 
 			switch (state) {
-				// Handle start state
+
+				// Handle START state -- START
 				case START -> {
+
+					// Reset start state and start position in line.
 					startPos = pos;
 					startPosInLine = posInLine;
 
-					switch (currentChar) {
-						case '\r' -> {
+					if (isLineTerminator(currentChar)) {
+						state = State.LINE_TERMINATOR;
+					} else if (isWhiteSpace(currentChar)) {
+						state = State.WHITE_SPACE;
+					} else if (isStringStartCharacter(currentChar)) {
+						state = State.STRING_LIT_START;
+					} else if (isZeroDigit(currentChar)) {
+						state = State.ZERO_DIGIT;
+					} else if (isIdentifierStart(currentChar)) {
+						currentIdentifier = new StringBuffer();
+						state = State.IDENTIFIER_PART;
+					} else if (isNonZeroDigit(currentChar)) {
+						currentDigit = new StringBuffer();
+						state = State.DIGIT;
+					} else if (isSymbol(currentChar)) {
+						currentSymbol = new StringBuffer();
+						state = State.SYMBOL;
+					} else if (isEOFChar(currentChar)) {
+						state = State.EOF;
+					}
+					else if (currentChar != 0) {
+						throw new LexicalException("", pos);
+					}
+				}
+				// Handle START state -- END
+
+
+				// Handle EOF state -- START
+				case EOF -> {
+					tokens.add(new Token(Kind.EOF, startPos, 0, line, startPosInLine));
+					pos++; posInLine++;
+				}
+				// Handle EOF state -- END
+
+
+				// Handle COMMENT state -- START
+				case COMMENT -> {
+					if (isLineTerminator(currentChar)) {
+						state = State.START;
+					} else {
+						pos++; posInLine++;
+					}
+				}
+				// Handle COMMENT state -- END
+
+
+				// Handle LINE_TERMINATOR state -- START
+				case LINE_TERMINATOR -> {
+					if (isLineTerminatorCR(currentChar)) {
+						line++; posInLine = 1;
+					} else if (isLineTerminatorLF(currentChar)) {
+						if (pos - 1 < 0  || !isLineTerminatorCR(chars[pos - 1])) {
 							line++; posInLine = 1;
-							pos++;
 						}
-						case '\n' -> {
-							if (pos - 1 < 0  || chars[pos - 1] != '\r') {
-								line++; posInLine = 1;
-							}
-							pos++;
-						}
-						case ' ', '\t', '\f' -> {
-							pos++; posInLine++;
-						}
-						case '"' -> {
-							state = State.STRING_LIT;
-						}
-						case 0 -> {
-							tokens.add(new Token(Kind.INTLIT, startPos, 1, line, posInLine));
-							pos++; posInLine++;
-						}
-						default -> {
-							if (isIdentifierStart(currentChar)) {
-								currentIdentifier = new StringBuffer();
-								state = State.IDENTIFIER_PART;
-							} else if (isNonZeroDigit(currentChar)) {
-								currentDigit = new StringBuffer();
-								state = State.DIGIT;
-							} else if (isSymbol(currentChar)) {
-								currentSymbol = new StringBuffer();
-								state = State.SYMBOL;
-							}
-						}
+					}
+					pos++;
+					state = State.START;
+				}
+				// Handle LINE_TERMINATOR state -- END
+
+
+				// Handle WHITE_SPACE state -- START
+				case WHITE_SPACE -> {
+					pos++; posInLine++;
+					state = State.START;
+				}
+				// Handle WHITE_SPACE state -- END
+
+
+				// Handle STRING_LIT_START state -- START
+				case STRING_LIT_START -> {
+					pos++; posInLine++;
+					state = State.STRING_LIT;
+				}
+				// Handle STRING_LIT_START state -- END
+
+				case STRING_LIT_END -> {
+					tokens.add(new Token(Kind.STRINGLIT, startPos, pos - startPos + 1, line, startPosInLine));
+					pos++; posInLine++;
+					state = State.START;
+				}
+
+				case STRING_LIT_ESCAPE_PREFIX -> {
+					pos++; posInLine++;
+					state = State.STRING_LIT_ESCAPE_SUFFIX;
+				}
+
+				case STRING_LIT_ESCAPE_SUFFIX -> {
+					if (isEOFChar(currentChar)) {
+						throw new LexicalException(
+								"Reached end of file while processing string literal inside STRING_LIT_ESCAPE_SUFFIX", startPos);
+					}
+
+					if (isEscapeSequenceSuffix(currentChar)) {
+						pos++; posInLine++;
+						state = State.STRING_LIT;
 					}
 				}
 
+				// Handle STRING_LIT state -- START
 				case STRING_LIT -> {
-					switch (currentChar) {
-						case '"' -> {
-							tokens.add(new Token(Kind.STRINGLIT, startPos, pos - startPos + 1, line, startPosInLine));
-							state = State.START;
+					if (isEOFChar(currentChar)) {
+						throw new LexicalException(
+								"Reached end of file while processing string literal", startPos);
+					}
+
+					if (isStringEndCharacter(currentChar)) {
+						state = State.STRING_LIT_END;
+					} else if (isEscapeSequencePrefix(currentChar)) {
+						state = State.STRING_LIT_ESCAPE_PREFIX;
+					} else if (isInputCharacter(currentChar)) {
 							pos++; posInLine++;
-						}
-						case '\\' -> {
-							pos++; posInLine++;
-							currentChar = chars[currentChar];
-							if (pos < chars.length - 1 && isEscapeSequenceSuffix(currentChar)) {
-								pos++; posInLine++;
-							} else {
-								throw new LexicalException(
-										"Unable to scan string literal due to back slash (\\)", pos - 1);
-							}
-						}
-						default -> {
-							if (isInputCharacter(currentChar)) {
-								pos++; posInLine++;
-							} else {
-								throw new LexicalException(
-										"Unable to scan string literal due to invalid input character", pos);
-							}
-						}
+					} else {
+						throw new LexicalException(
+								"Unable to scan string literal due to invalid input character", pos);
 					}
 				}
+				// Handle STRING_LIT state -- END
 
+
+				// Handle ZERO_DIGIT state -- START
+				case ZERO_DIGIT -> {
+					tokens.add(new Token(Kind.INTLIT, startPos, 1, line, posInLine));
+					pos++; posInLine++;
+					state = State.START;
+				}
+				// Handle ZERO_DIGIT state -- END
+
+
+				// Handle DIGIT state -- START
 				case DIGIT -> {
 					if (isDigit(currentChar)) {
 						currentDigit.append(currentChar);
@@ -222,7 +302,10 @@ public class Scanner {
 						state = State.START;
 					}
 				}
+				// Handle DIGIT state -- END
 
+
+				// Handle IDENTIFIER_PART state -- START
 				case IDENTIFIER_PART -> {
 					if (isIdentifierPart(currentChar)) {
 						currentIdentifier.append(currentChar);
@@ -239,7 +322,10 @@ public class Scanner {
 						state = State.START;
 					}
 				}
+				// Handle IDENTIFIER_PART state -- END
 
+
+				// Handle SYMBOL state -- START
 				case SYMBOL -> {
 					if (currentSymbol.length() == 2) {
 						String currentSymbolString = currentSymbol.toString();
@@ -247,10 +333,7 @@ public class Scanner {
 						if ("//".equals(currentSymbolString)) {
 							currentSymbol = null;
 							state = State.COMMENT;
-							break;
-						}
-
-						if (symbolToKind.containsKey(currentSymbolString)) {
+						} else if (symbolToKind.containsKey(currentSymbolString)) {
 							tokens.add(new Token(symbolToKind.get(currentSymbolString),
 									startPos, pos - startPos, line, startPosInLine));
 							state = State.START;
@@ -258,19 +341,18 @@ public class Scanner {
 						} else {
 							String prefix = currentSymbol.substring(0, 1);
 							if (symbolToKind.containsKey(prefix)) {
-								tokens.add(new Token(symbolToKind.get(currentSymbolString),
+								tokens.add(new Token(symbolToKind.get(prefix),
 										startPos, 1, line, startPosInLine));
 								state = State.START;
 								currentSymbol = null;
-								pos--;
+								pos--; posInLine--;
 							} else {
 								throw new LexicalException("Unable to scan symbol " + chars[startPos], startPos);
 							}
 						}
-					}
-
-					if (isSymbol(currentChar)) {
+					} else if (isSymbol(currentChar)) {
 						currentSymbol.append(currentChar);
+						pos++; posInLine++;
 					} else {
 						String currentSymbolString = currentSymbol.toString();
 						if (symbolToKind.containsKey(currentSymbolString)) {
@@ -278,26 +360,17 @@ public class Scanner {
 									startPos, 1, line, startPosInLine));
 							state = State.START;
 							currentSymbol = null;
-							pos--;
 						} else {
 							throw new LexicalException("Unable to scan symbol " + chars[startPos], startPos);
 						}
 					}
 				}
+				// Handle SYMBOL state -- END
 
-				case COMMENT -> {
-					if (isLineTerminator(currentChar)) {
-						state = State.START;
-					} else {
-						pos++;
-						posInLine++;
-					}
-				}
 
 			}
 		}
 
-		tokens.add(new Token(Kind.EOF, pos, 0, line, posInLine));
 		return this;
 	}
 
@@ -329,12 +402,16 @@ public class Scanner {
 		return isIdentifierStart(c) || Character.isDigit(c);
 	}
 
+	private static boolean isZeroDigit(char c) {
+		return c == '0';
+	}
+
 	private static boolean isNonZeroDigit(char c) {
-		return Character.isDigit(c) && c != '0';
+		return c >= '1' && c <= '9';
 	}
 
 	private static boolean isDigit(char c) {
-		return Character.isDigit(c);
+		return c >= '0' && c <= '9';
 	}
 
 	private static boolean isSymbol(char c) {
@@ -345,6 +422,18 @@ public class Scanner {
 		return isRawInputCharacter(c) && c != '\n' && c != '\r';
 	}
 
+	private static boolean isStringStartCharacter(char c) {
+		return c == '"';
+	}
+
+	private static boolean isStringEndCharacter(char c) {
+		return c == '"';
+	}
+
+	private static boolean isEscapeSequencePrefix(char c) {
+		return c == '\\';
+	}
+
 	private static boolean isEscapeSequenceSuffix(char c) {
 		Set<Character> validEscapeSuffix = new HashSet<>(Arrays.asList(
 			'b', 't', 'n', 'f', 'r', '"', '\'', '\\'
@@ -352,25 +441,44 @@ public class Scanner {
 		return validEscapeSuffix.contains(c);
 	}
 
+	private static boolean isEOFChar(char c) {
+		return c == EOFChar;
+	}
+
 	/**
 	 * precondition:  This Token is an INTLIT or CONST
-	 * @throws LexicalException 
-	 * 
+	 * @throws LexicalException
+	 *
 	 * @returns the integer value represented by the token
 	 */
 	public int intVal(Token t) throws LexicalException {
 		/* IMPLEMENT THIS */
-		return 0;
+		StringBuilder sb = new StringBuilder();
+		for(int i=0; i < t.length; i++) {
+			sb.append(chars[t.pos() + i]);
+		}
+		switch (t.kind) {
+			case INTLIT -> {
+
+				return Integer.parseInt(sb.toString());
+			}
+			case CONST -> {
+				return constants.get(sb.toString());
+			}
+			default -> {
+				throw new LexicalException("Unable to get int value for token of kind " + t.kind, t.pos);
+			}
+		}
 	}
-	
+
 	/**
 	 * Hashmap containing the values of the predefined colors.
-	 * Included for your convenience.  
-	 * 
+	 * Included for your convenience.
+	 *
 	 */
 	private static HashMap<String, Integer> constants;
 	static {
-		constants = new HashMap<String, Integer>();	
+		constants = new HashMap<String, Integer>();
 		constants.put("Z", 255);
 		constants.put("WHITE", 0xffffffff);
 		constants.put("SILVER", 0xffc0c0c0);
@@ -448,7 +556,7 @@ public class Scanner {
 
 	/**
 	 * Returns a String representation of the list of Tokens.
-	 * You may modify this as desired. 
+	 * You may modify this as desired.
 	 */
 	public String toString() {
 		return tokens.toString();
