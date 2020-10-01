@@ -385,8 +385,22 @@ class ScannerTest {
     			aaaaa//comment\n1234//comment\r\nbbbb
 				""";
 		show(input);
+		Scanner scanner = new Scanner(input).scan();
+		show(scanner);
+	}
+
+	@Test void testGetTextForBackslashB() throws LexicalException {
+		String input = """
+    			x=\"\\b\";
+				""";
 		show(input);
 		Scanner scanner = new Scanner(input).scan();
 		show(scanner);
+		scanner.nextToken();
+		scanner.nextToken();
+		String stringLit = scanner.getText(scanner.nextToken());
+		System.out.println("stringLit:" + stringLit);
+		System.out.println(stringLit.length());
+		assertEquals("\b", stringLit);
 	}
 }

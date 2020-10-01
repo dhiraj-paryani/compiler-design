@@ -217,7 +217,12 @@ class SimpleParserTest {
 				""";
 		passExpression(input);
 	}
-	
 
-		
+	@Test
+	public void incompleteTokens() throws LexicalException, SyntaxException {
+		String input = """
+				int
+				""";
+		fail(input);
+	}
 }

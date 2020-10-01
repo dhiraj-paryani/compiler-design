@@ -56,13 +56,11 @@ public class SimpleParser {
 	
 
 	public boolean consumedAll() {
-		/* if (scanner.hasTokens()) {
+		if (scanner.hasTokens()) {
 			Token t = scanner.nextToken();
 			return t.kind() == Scanner.Kind.EOF;
 		}
-		return true; */
-		System.out.println(t);
-		return EOF.equals(t.kind());
+		return true;
 	}
 
 
@@ -396,7 +394,7 @@ public class SimpleParser {
 	}
 
 	private void pixelSelector() throws SyntaxException {
-		// PixelSelector ∷= Expression LSQUARE Expression COMMA Expression RSQUARE
+		// PixelSelector ∷= LSQUARE Expression COMMA Expression RSQUARE
 
 		expression();
 		match(LSQUARE);
@@ -531,7 +529,7 @@ public class SimpleParser {
    }
 
    private boolean isFirstInPixelSelector() {
-		return isFirstInExpression();
+		return assertTokenKind(LSQUARE);
    }
 
    private boolean isFirstInAttribute() {
@@ -547,7 +545,11 @@ public class SimpleParser {
    }
 
 	private Token consume() {
-		t = scanner.nextToken();
+		if (scanner.hasTokens()) {
+			t = scanner.nextToken();
+		} else {
+			t = null;
+		}
 		return t;
 	}
 
@@ -555,7 +557,7 @@ public class SimpleParser {
 		if (kind.equals(t.kind())) {
 			consume();
 		} else {
-			throw new SyntaxException(t, "Unable to match token of kind: " + t.kind() + " ,with kind: " + kind);
+			throw new SyntaxException(t, "Unable to match token of kind: " + t.kind() + ", with kind: " + kind);
 		}
 	}
 
