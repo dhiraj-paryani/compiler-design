@@ -14,7 +14,6 @@
 
 package cop5556fa20;
 
-import cop5556fa20.Scanner.LexicalException;
 import cop5556fa20.Scanner.Token;
 
 import static cop5556fa20.Scanner.*;
@@ -47,11 +46,11 @@ public class SimpleParser {
 		t = scanner.nextToken();
 	}
 
-	public void parse() throws SyntaxException, LexicalException {
+	public void parse() throws SyntaxException {
 		program();
 		if (!consumedAll()) throw new SyntaxException(scanner.nextToken(), "tokens remain after parsing");
 			//If consumedAll returns false, then there is at least one
-		    //token left (the EOF token) so the call to nextToken is safe. 
+		    //token left (the EOF token) so the call to nextToken is safe.
 	}
 	
 
@@ -66,6 +65,7 @@ public class SimpleParser {
 
 	private void program() throws SyntaxException {
 		// Program ::= (Declaration SEMI | Statement SEMI)*
+		// Program ::= ((Declaration | Statement) SEMI)*
 
 		while (isFirstInDeclaration() || isFirstInStatement()) {
 			if (isFirstInDeclaration()) {
@@ -77,10 +77,12 @@ public class SimpleParser {
 			}
 			match(SEMI);
 		}
+
+		assertTokenKind(EOF);
 	}
 
 	private void declaration() throws SyntaxException {
-		// Declaration :: =  VariableDeclaration | ImageDeclaration
+		// Declaration :: = VariableDeclaration | ImageDeclaration
 
 		if (isFirstInVariableDeclaration()) {
 			variableDeclaration();
@@ -92,7 +94,7 @@ public class SimpleParser {
 	}
 
 	private void variableDeclaration() throws SyntaxException {
-		// VariableDeclaration  ::=  VarType IDENT  (  ASSIGN  Expression  | ϵ )
+		// VariableDeclaration ::= VarType IDENT (ASSIGN Expression | ϵ)
 
 		if (isFirstInVarType()) {
 			varType();
@@ -396,7 +398,6 @@ public class SimpleParser {
 	private void pixelSelector() throws SyntaxException {
 		// PixelSelector ∷= LSQUARE Expression COMMA Expression RSQUARE
 
-		expression();
 		match(LSQUARE);
 		expression();
 		match(COMMA);
@@ -429,90 +430,84 @@ public class SimpleParser {
 		match(RSQUARE);
 	}
 
-
-	private boolean isFirstInProgram() {
-		return isFirstInDeclaration()
-				|| isFirstInStatement();
-	}
-
-	private boolean isFirstInDeclaration() {
+	private boolean isFirstInDeclaration() throws SyntaxException {
 		return isFirstInVariableDeclaration()
 				|| isFirstInImageDeclaration();
    }
 
-   private boolean isFirstInVariableDeclaration() {
+   private boolean isFirstInVariableDeclaration() throws SyntaxException {
 		return isFirstInVarType();
    }
 
-   private boolean isFirstInVarType() {
+   private boolean isFirstInVarType() throws SyntaxException {
 		return assertTokenKind(KW_int)
 				|| assertTokenKind(KW_string);
    }
 
-   private boolean isFirstInImageDeclaration() {
+   private boolean isFirstInImageDeclaration() throws SyntaxException {
 	   return assertTokenKind(KW_image);
    }
 
-   private boolean isFirstInStatement() {
+   private boolean isFirstInStatement() throws SyntaxException {
 		return assertTokenKind(IDENT);
    }
 
-   private boolean isFirstInImageOutStatement() {
+   private boolean isFirstInImageOutStatement() throws SyntaxException {
 		return assertTokenKind(RARROW);
    }
 
-   private boolean isFirstInImageInStatement() {
+   private boolean isFirstInImageInStatement() throws SyntaxException {
 		return assertTokenKind(LARROW);
    }
 
-   private boolean isFirstInAssignmentStatementAndLoopStatement() {
+   private boolean isFirstInAssignmentStatementAndLoopStatement() throws SyntaxException {
 		return assertTokenKind(ASSIGN);
    }
 
-   private boolean isFirstInExpression() {
+   private boolean isFirstInExpression() throws SyntaxException {
 		return isFirstInOrExpression();
    }
 
-   private boolean isFirstInOrExpression() {
+   private boolean isFirstInOrExpression() throws SyntaxException {
 		return isFirstInAndExpression();
    }
 
-   private boolean isFirstInAndExpression() {
+   private boolean isFirstInAndExpression() throws SyntaxException {
 		return isFirstInEqExpression();
    }
 
-   private boolean isFirstInEqExpression() {
+   private boolean isFirstInEqExpression() throws SyntaxException {
 		return isFirstInRelExpression();
    }
 
-   private boolean isFirstInRelExpression() {
+   private boolean isFirstInRelExpression() throws SyntaxException {
 		return isFirstInAddExpression();
    }
 
-   private boolean isFirstInAddExpression() {
+   private boolean isFirstInAddExpression() throws SyntaxException {
 		return isFirstInMultExpression();
    }
 
-   private boolean isFirstInMultExpression() {
+   private boolean isFirstInMultExpression() throws SyntaxException {
 		return isFirstInUnaryExpression();
    }
 
-   private boolean isFirstInUnaryExpression() {
+   private boolean isFirstInUnaryExpression() throws SyntaxException {
 		return assertTokenKind(PLUS)
 				|| assertTokenKind(MINUS)
 				|| isFirstInUnaryExpressionNotPlusMinus();
    }
 
-   private boolean isFirstInUnaryExpressionNotPlusMinus() {
+   private boolean isFirstInUnaryExpressionNotPlusMinus() throws SyntaxException {
 		return assertTokenKind(EXCL)
 				|| isFirstInHashExpression();
    }
 
-   private boolean isFirstInHashExpression() {
+   private boolean isFirstInHashExpression() throws SyntaxException {
 		return isFirstInPrimary();
    }
 
-   private boolean isFirstInPrimary() {
+   private boolean isFirstInPrimary() throws SyntaxException {
 	   return assertTokenKind(INTLIT)
 			   || assertTokenKind(IDENT)
 			   || assertTokenKind(LPAREN)
@@ -524,15 +519,15 @@ public class SimpleParser {
 			   || isFirstInArgExpression();
    }
 
-   private boolean isFirstInPixelConstructor() {
+   private boolean isFirstInPixelConstructor() throws SyntaxException {
 		return assertTokenKind(LPIXEL);
    }
 
-   private boolean isFirstInPixelSelector() {
+   private boolean isFirstInPixelSelector() throws SyntaxException {
 		return assertTokenKind(LSQUARE);
    }
 
-   private boolean isFirstInAttribute() {
+   private boolean isFirstInAttribute() throws SyntaxException {
 		return assertTokenKind(KW_WIDTH)
 				|| assertTokenKind(KW_HEIGHT)
 				|| assertTokenKind(KW_RED)
@@ -540,20 +535,18 @@ public class SimpleParser {
 				|| assertTokenKind(KW_BLUE);
    }
 
-   private boolean isFirstInArgExpression() {
+   private boolean isFirstInArgExpression() throws SyntaxException {
 		return assertTokenKind(AT);
    }
 
-	private Token consume() {
-		if (scanner.hasTokens()) {
-			t = scanner.nextToken();
-		} else {
-			t = null;
-		}
-		return t;
+	private void consume() {
+		t = scanner.hasTokens() ? scanner.nextToken() : null;
 	}
 
 	private void match(Kind kind) throws SyntaxException {
+		if (t == null) {
+			throw new SyntaxException(null, "There is no token to match");
+		}
 		if (kind.equals(t.kind())) {
 			consume();
 		} else {
@@ -561,7 +554,10 @@ public class SimpleParser {
 		}
 	}
 
-   private boolean assertTokenKind(Kind expected) {
-		return expected.equals(t.kind());
+   private boolean assertTokenKind(Kind expected) throws SyntaxException {
+	   if (t == null) {
+		   throw new SyntaxException(t, "There is no token to assert kind");
+	   }
+	   return expected.equals(t.kind());
    }
 }

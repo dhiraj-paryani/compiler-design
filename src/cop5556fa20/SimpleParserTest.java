@@ -225,4 +225,11 @@ class SimpleParserTest {
 				""";
 		fail(input);
 	}
+
+	@Test
+	public void emptyTokens() throws LexicalException, SyntaxException {
+		String input = """
+				""";
+		pass(input);
+	}
 }

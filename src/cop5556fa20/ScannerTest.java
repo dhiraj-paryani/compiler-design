@@ -403,4 +403,24 @@ class ScannerTest {
 		System.out.println(stringLit.length());
 		assertEquals("\b", stringLit);
 	}
+
+	@Test
+	public void testMixed() throws LexicalException {
+		String input =  """
+              ijBLUEc //NAVY screenX screen\nX\n "Example\\'Strin\\ng\\r\\n" 123+
+              """;
+		Scanner scanner = new Scanner(input).scan();
+		show(scanner);
+		Token t0 = checkNext(scanner, IDENT, 0, 7, 1, 1);
+		assertEquals("ijBLUEc", scanner.getText(t0));
+		checkNext(scanner, KW_X, 30, 1, 2, 1);
+		Token t1 = checkNext(scanner, STRINGLIT, 33, 23, 3, 2);
+		String text = scanner.getText(t1);
+		System.out.println("Token text");
+		
+		assertEquals("Example\'Strin\ng\r\n", scanner.getText(t1));
+		checkNext(scanner, INTLIT, 57, 3, 3, 26);
+		checkNext(scanner, PLUS, 60, 1, 3, 29);
+		checkNextIsEOF(scanner);
+	}
 }
