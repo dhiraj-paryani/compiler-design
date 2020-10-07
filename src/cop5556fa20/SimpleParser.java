@@ -36,7 +36,6 @@ public class SimpleParser {
 
 	}
 
-
 	final Scanner scanner;
 	Token t;
 
@@ -78,7 +77,7 @@ public class SimpleParser {
 			match(SEMI);
 		}
 
-		assertTokenKind(EOF);
+		match(EOF);
 	}
 
 	private void declaration() throws SyntaxException {
@@ -556,7 +555,7 @@ public class SimpleParser {
 
    private boolean assertTokenKind(Kind expected) throws SyntaxException {
 	   if (t == null) {
-		   throw new SyntaxException(t, "There is no token to assert kind");
+		   throw new SyntaxException(null, "There is no token to assert kind");
 	   }
 	   return expected.equals(t.kind());
    }
