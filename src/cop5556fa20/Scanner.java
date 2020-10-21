@@ -49,6 +49,7 @@ public class Scanner {
 		KW_SCREEN/* screen */, KW_SCREEN_WIDTH /* screen_width */, KW_SCREEN_HEIGHT /*screen_height */,
 		KW_image/* image */, KW_int/* int */, KW_string /* string */,
 		KW_RED /* red */,  KW_GREEN /* green */, KW_BLUE /* blue */,
+		NOP,
 		ASSIGN/* = */, GT/* > */, LT/* < */,
 		EXCL/* ! */, Q/* ? */, COLON/* : */, EQ/* == */, NEQ/* != */, GE/* >= */, LE/* <= */,
 		AND/* & */, OR/* | */, PLUS/* + */, MINUS/* - */, STAR/* * */, DIV/* / */, MOD/* % */,
@@ -505,7 +506,7 @@ public class Scanner {
 	 * Included for your convenience.
 	 *
 	 */
-	private static HashMap<String, Integer> constants;
+	public static HashMap<String, Integer> constants;
 	static {
 		constants = new HashMap<String, Integer>();
 		constants.put("Z", 255);
