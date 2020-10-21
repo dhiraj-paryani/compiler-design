@@ -243,7 +243,7 @@ public class Parser {
 	}
 
 	//expression has package visibility (rather than private) to allow tests to call expression directly
-	public Expression expression() throws SyntaxException, LexicalException {
+	protected Expression expression() throws SyntaxException, LexicalException {
 		// Expression ::=  OrExpression  Q  Expression COLON Expression | OrExpression
 		// Expression ::=  OrExpression  ( Q  Expression COLON Expression | ϵ )
 
