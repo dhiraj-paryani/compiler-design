@@ -406,6 +406,7 @@ public class TypeCheckVisitor implements ASTVisitor {
 		// IDENT.type == Expression.type
 		assertTypes(first, dec.type(), t);
 
+		statementAssign.setDec(dec);
 		return null;
 	}
 
@@ -502,6 +503,7 @@ public class TypeCheckVisitor implements ASTVisitor {
 		assertNameAlreadyDeclared(first, name);
 
 		Dec dec = symbolTable.get(name);
+		statementOutScreen.setDec(dec);
 
 		// IDENT.type == Int || IDENT.type == String || IDENT.type == Image
 		assertTypes(first, dec.type(), Type.Int, Type.String, Type.Image);

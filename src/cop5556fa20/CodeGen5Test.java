@@ -145,7 +145,40 @@ class CodeGen5Test {
 		expectedLog.add(args[0]);
 		assertEquals(expectedLog, LoggedIO.globalLog);		
 	}
-	
 
+	@Test
+	public void commandLineArg1() throws Exception {
+		String className = "commandLineArg1";
+		String input = """
+				int a;
+				a = @0;
+				a -> screen;
+				""";
 
+		byte[] bytecode = genCode(input, className, false);
+		String[] args =  {"123"};
+		runCode(className, bytecode, args);
+		//set up expected log
+		ArrayList<Object> expectedLog = new ArrayList<Object>();
+		expectedLog.add(Integer.parseInt(args[0]));
+		assertEquals(expectedLog, LoggedIO.globalLog);
+	}
+
+	@Test
+	public void conditionalExpression() throws Exception {
+		String className = "conditionalExpression";
+		String input = """
+				string a;
+				a = (1 == 2) ? @0 : @1;
+				a -> screen;
+				""";
+
+		byte[] bytecode = genCode(input, className, false);
+		String[] args =  {"123", "456"};
+		runCode(className, bytecode, args);
+		//set up expected log
+		ArrayList<Object> expectedLog = new ArrayList<Object>();
+		expectedLog.add("456");
+		assertEquals(expectedLog, LoggedIO.globalLog);
+	}
 }

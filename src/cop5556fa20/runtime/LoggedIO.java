@@ -9,6 +9,7 @@ public class LoggedIO {
 	public final static String className = "cop5556fa20/runtime/LoggedIO";	
 	
 	public final static String stringToScreenSig = "(Ljava/lang/String;)V";
+
 	public static void stringToScreen(String s) {
 		globalLog.add(s);
 		System.out.println(s);

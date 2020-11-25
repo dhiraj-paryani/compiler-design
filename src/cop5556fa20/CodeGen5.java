@@ -24,7 +24,6 @@ import org.objectweb.asm.Opcodes;
 
 import cop5556fa20.AST.ASTNode;
 import cop5556fa20.AST.ASTVisitor;
-import cop5556fa20.AST.Dec;
 import cop5556fa20.AST.DecImage;
 import cop5556fa20.AST.DecVar;
 import cop5556fa20.AST.ExprArg;
@@ -50,7 +49,9 @@ import cop5556fa20.AST.Type;
 import cop5556fa20.runtime.LoggedIO;
 
 public class CodeGen5 implements ASTVisitor, Opcodes {
-	
+	private static final String STRING_DESC = "Ljava/lang/String;";
+	private static final String INTEGER_DESC = "I";
+
 	final String className;
 	final boolean isInterface = false;
 	ClassWriter cw;
@@ -75,50 +76,135 @@ public class CodeGen5 implements ASTVisitor, Opcodes {
 	public Object visitDecVar(DecVar decVar, Object arg) throws Exception {
 		String varName = decVar.name();
 		Type type = decVar.type();
-		String desc;
-		if (type == Type.String) {desc = "Ljava/lang/String;";}
-		else {throw new UnsupportedOperationException("not yet implemented");}
-		FieldVisitor fieldVisitor = cw.visitField(ACC_STATIC, varName, desc, null, null);
+
+		String desc = STRING_DESC;
+		Object defaultValue = null;
+		if (type == Type.Int) {
+			desc = INTEGER_DESC;
+			defaultValue = 0;
+		}
+
+		FieldVisitor fieldVisitor = cw.visitField(ACC_STATIC, varName, desc, null, defaultValue);
 		fieldVisitor.visitEnd();
 
 		//evaluate initial value and store in variable, if one is given.
 		Expression e = decVar.expression();
 		if (e != Expression.empty) {
-			e.visit(this, type); // generates code to evaluate expression and leave value on top of the stack
+			e.visit(this, null); // generates code to evaluate expression and leave value on top of the stack
 			mv.visitFieldInsn(PUTSTATIC, className, varName, desc);
+		}
+
+		return null;
+	}
+
+	@Override
+	public Object visitExprArg(ExprArg exprArg, Object arg) throws Exception {
+		// Loading local variable args
+		mv.visitVarInsn(ALOAD, 0);
+		// Load the index
+		exprArg.e().visit(this, null);
+		// Load the corresponding element
+		mv.visitInsn(AALOAD);
+
+		if (exprArg.type() == Type.Int) {
+			mv.visitMethodInsn(INVOKESTATIC, "java/lang/Integer", "parseInt", "(Ljava/lang/String;)I", false);
+		}
+
+		return null;
+	}
+
+	@Override
+	public Object visitExprBinary(ExprBinary exprBinary, Object arg) throws Exception {
+		exprBinary.e0().visit(this, null);
+		exprBinary.e1().visit(this, null);
+
+		Scanner.Kind op = exprBinary.op();
+		switch (op) {
+			case AND ->
+					mv.visitInsn(IAND);
+			case OR ->
+					mv.visitInsn(IOR);
+			case EQ -> {
+				if (exprBinary.e0().type() == Type.Int) {
+					addBooleanJumpLogic(IF_ICMPEQ);
+				} else {
+					addBooleanJumpLogic(IF_ACMPEQ);
+				}
+			}
+			case NEQ -> {
+				if (exprBinary.e0().type() == Type.Int) {
+					addBooleanJumpLogic(IF_ICMPNE);
+				} else {
+					addBooleanJumpLogic(IF_ACMPNE);
+				}
+			}
+			case LT ->
+					addBooleanJumpLogic(IF_ICMPLT);
+			case GT ->
+					addBooleanJumpLogic(IF_ICMPGT);
+			case LE ->
+					addBooleanJumpLogic(IF_ICMPLE);
+			case GE ->
+					addBooleanJumpLogic(IF_ICMPGE);
+			case PLUS -> {
+				if (exprBinary.e0().type() == Type.Int) {
+					mv.visitInsn(IADD);
+				} else {
+					mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/String", "concat", "(Ljava/lang/String;)Ljava/lang/String;", isInterface);
+				}
+			}
+			case MINUS ->
+					mv.visitInsn(ISUB);
+			case STAR ->
+					mv.visitInsn(IMUL);
+			case DIV ->
+					mv.visitInsn(IDIV);
+			case MOD ->
+					mv.visitInsn(IREM);
+			default ->
+					throw new UnsupportedOperationException("Operator " + op + " not supported in binary expression");
 		}
 		return null;
 	}
-	@Override
-	public Object visitExprArg(ExprArg exprArg, Object arg) throws Exception {
-		// TODO Auto-generated method stub
-		throw new UnsupportedOperationException("not yet implemented");
-	}
-	@Override
-	public Object visitExprBinary(ExprBinary exprBinary, Object arg) throws Exception {
-		// TODO Auto-generated method stub
-		throw new UnsupportedOperationException("not yet implemented");
-	}
+
 	@Override
 	public Object visitExprConditional(ExprConditional exprConditional, Object arg) throws Exception {
-		// TODO Auto-generated method stub
-		throw new UnsupportedOperationException("not yet implemented");
+		exprConditional.condition().visit(this, null);
+
+		Label falseLabel = new Label();
+		Label endLabel = new Label();
+
+		mv.visitJumpInsn(IFEQ, falseLabel);
+
+		exprConditional.trueCase().visit(this, null);
+		mv.visitJumpInsn(GOTO, endLabel);
+
+		mv.visitLabel(falseLabel);
+		exprConditional.falseCase().visit(this, null);
+
+		mv.visitLabel(endLabel);
+
+		return null;
 	}
+
 	@Override
 	public Object visitExprConst(ExprConst exprConst, Object arg) throws Exception {
-		// TODO Auto-generated method stub
-		throw new UnsupportedOperationException("not yet implemented");
+		mv.visitLdcInsn(exprConst.value());
+		return null;
 	}
+
 	@Override
 	public Object visitExprHash(ExprHash exprHash, Object arg) throws Exception {
 		// TODO Auto-generated method stub
 		throw new UnsupportedOperationException("not yet implemented");
 	}
+
 	@Override
 	public Object visitExprIntLit(ExprIntLit exprIntLit, Object arg) throws Exception {
-		// TODO Auto-generated method stub
-		throw new UnsupportedOperationException("not yet implemented");
+		mv.visitLdcInsn(exprIntLit.value());
+		return null;
 	}
+
 	@Override
 	public Object visitExprPixelConstructor(ExprPixelConstructor exprPixelConstructor, Object arg) throws Exception {
 		// TODO Auto-generated method stub
@@ -138,15 +224,39 @@ public class CodeGen5 implements ASTVisitor, Opcodes {
 		mv.visitLdcInsn(exprStringLit.text());
 		return null;
 	}
+
 	@Override
 	public Object visitExprUnary(ExprUnary exprUnary, Object arg) throws Exception {
-		// TODO Auto-generated method stub
-		throw new UnsupportedOperationException("not yet implemented");
+		Scanner.Kind op = exprUnary.op();
+
+		if (isKind(op, Scanner.Kind.PLUS, Scanner.Kind.MINUS)) {
+			exprUnary.e().visit(this, Type.Int);
+			if (isKind(op, Scanner.Kind.MINUS)) {
+				mv.visitInsn(INEG);
+			}
+		}
+
+		if (isKind(op, Scanner.Kind.EXCL)) {
+			exprUnary.e().visit(this, null);
+			addBooleanJumpLogic(IFEQ);
+		}
+
+		return null;
 	}
+
 	@Override
 	public Object visitExprVar(ExprVar exprVar, Object arg) throws Exception {
-		// TODO Auto-generated method stub
-		throw new UnsupportedOperationException("not yet implemented");
+		String name = exprVar.name();
+
+		if (exprVar.type() == Type.Int) {
+			mv.visitFieldInsn(GETSTATIC, className, name, INTEGER_DESC);
+		}
+
+		if (exprVar.type() == Type.String) {
+			mv.visitFieldInsn(GETSTATIC, className, name, STRING_DESC);
+		}
+
+		return null;
 	}
 	
 	
@@ -202,13 +312,20 @@ public class CodeGen5 implements ASTVisitor, Opcodes {
 
 		// generate classfile as byte array and return
 		return cw.toByteArray();
-
 	}
 
 	@Override
 	public Object visitStatementAssign(StatementAssign statementAssign, Object arg) throws Exception {
-		// TODO Auto-generated method stub
-		throw new UnsupportedOperationException("not yet implemented");
+		String name = statementAssign.name();
+		statementAssign.expression().visit(this, null);
+
+		switch (statementAssign.dec().type()) {
+			case Int ->
+					mv.visitFieldInsn(PUTSTATIC, className, name, INTEGER_DESC);
+			case String ->
+					mv.visitFieldInsn(PUTSTATIC, className, name, STRING_DESC);
+		}
+		return null;
 	}
 	@Override
 	public Object visitStatementImageIn(StatementImageIn statementImageIn, Object arg) throws Exception {
@@ -220,11 +337,13 @@ public class CodeGen5 implements ASTVisitor, Opcodes {
 		// TODO Auto-generated method stub
 		throw new UnsupportedOperationException("not yet implemented");
 	}
+
 	@Override
 	public Object visitExprEmpty(ExprEmpty exprEmpty, Object arg) throws Exception {
 		// TODO Auto-generated method stub
-		throw new UnsupportedOperationException("not yet implemented");
+		return null;
 	}
+
 	@Override
 	public Object visitStatementOutFile(StatementOutFile statementOutFile, Object arg) throws Exception {
 		// TODO Auto-generated method stub
@@ -234,24 +353,43 @@ public class CodeGen5 implements ASTVisitor, Opcodes {
 	@Override
 	public Object visitStatementOutScreen(StatementOutScreen statementOutScreen, Object arg) throws Exception {
 		String name = statementOutScreen.name();
-		Dec dec = statementOutScreen.dec();
-		Type type = dec.type();
-		String desc;
+
+		Type type = statementOutScreen.dec().type();
 		switch (type) {
-		case String -> {
-			desc = "Ljava/lang/String;";
-			mv.visitFieldInsn(GETSTATIC, className, name, desc);
-			mv.visitMethodInsn(INVOKESTATIC, LoggedIO.className, "stringToScreen", LoggedIO.stringToScreenSig,
-					isInterface);
-		}
-		case Int -> {
-			//IMPLEMENT THIS FOR ASSIGNMENT 5
-			throw new UnsupportedOperationException("not yet implemented");
-		}
-		default -> {
-			throw new UnsupportedOperationException("not yet implemented");
-		}
+			case String -> {
+				mv.visitFieldInsn(GETSTATIC, className, name, STRING_DESC);
+				mv.visitMethodInsn(INVOKESTATIC, LoggedIO.className, "stringToScreen", LoggedIO.stringToScreenSig,
+						isInterface);
+			}
+			case Int -> {
+				mv.visitFieldInsn(GETSTATIC, className, name, INTEGER_DESC);
+				mv.visitMethodInsn(INVOKESTATIC, LoggedIO.className, "intToScreen", LoggedIO.intToScreenSig,
+						isInterface);
+			}
+			default ->
+				throw new UnsupportedOperationException("not yet implemented");
 		}
 		return null;
+	}
+
+	private void addBooleanJumpLogic(int opCode) {
+		Label trueLabel = new Label();
+		Label endLabel = new Label();
+
+		mv.visitJumpInsn(opCode, trueLabel);
+		mv.visitInsn(ICONST_0);
+		mv.visitJumpInsn(GOTO, endLabel);
+		mv.visitLabel(trueLabel);
+		mv.visitInsn(ICONST_1);
+		mv.visitLabel(endLabel);
+	}
+
+	private boolean isKind(Scanner.Kind actual, Scanner.Kind...expectedKinds) {
+		for (Scanner.Kind expectedKind : expectedKinds) {
+			if (actual == expectedKind) {
+				return true;
+			}
+		}
+		return false;
 	}
 }
