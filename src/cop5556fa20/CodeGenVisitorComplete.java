@@ -483,7 +483,6 @@ public class CodeGenVisitorComplete implements ASTVisitor, Opcodes {
 						mv.visitInsn(ICONST_0);
 						mv.visitVarInsn(ISTORE, 2);
 					}
-
 					// Inner loop
 					mv.visitLabel(innerLoop);
 					{
@@ -493,7 +492,6 @@ public class CodeGenVisitorComplete implements ASTVisitor, Opcodes {
 						mv.visitVarInsn(ILOAD, 4);
 						// condition check
 						mv.visitJumpInsn(IF_ICMPGE, endInnerLoop);
-
 						{
 							if (statementLoop.cond() == Expression.empty) {
 								executeLoopStatement(statementLoop.name(), statementLoop.e());

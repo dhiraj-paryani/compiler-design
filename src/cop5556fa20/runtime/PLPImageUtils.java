@@ -41,7 +41,7 @@ public class PLPImageUtils {
             if (dimension != null) {
                 int sourceWidth = sourceImage.getWidthThrows(line, posLine);
                 int sourceHeight = sourceImage.getHeightThrows(line, posLine);
-                if (sourceWidth != width && sourceHeight != height) {
+                if (sourceWidth != width || sourceHeight != height) {
                     throw new PLPImage.PLPImageException(line, posLine, "size does not matching while assigning the image");
                 }
             }
