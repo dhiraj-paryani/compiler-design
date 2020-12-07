@@ -53,7 +53,7 @@ class CodeGen6Test {
 	}
 
 
-	static boolean doKeepFrames = false;
+	static boolean doKeepFrames = true;
 	static void keepFrames() throws IOException {
 		if (doKeepFrames) {
 		        System.out.println("enter any char to close frames and exit");
@@ -281,7 +281,7 @@ class CodeGen6Test {
 		}
 		expectedLog.add(checkerboard);
 		assertEquals(expectedLog, LoggedIO.globalLog);
-		// keepFrames();
+		keepFrames();
 	}
 	
 
@@ -295,7 +295,7 @@ class CodeGen6Test {
 			genRun(input);
 		});
 		show(exception);	
-		// keepFrames();
+		keepFrames();
 	}
 
 	@Test

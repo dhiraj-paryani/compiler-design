@@ -13,5 +13,5 @@ public class ImageResources {
 	//binDir should be the fully qualified name of the directory where you want generated .class files to go.
 	//It is easiest to make this the bin directory that contains the cop5556fa20 directory where the java compiler is putting the .class files 
 	//for your Scanner, Parser, etc. 
-	public static final String binDir="/Users/dhirajmaheshparyani/dhiraj/padhai/ufl/plp/compiler-design/bin";
+	public static final String binDir="";
 }	
