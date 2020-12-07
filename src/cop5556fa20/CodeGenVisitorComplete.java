@@ -230,10 +230,10 @@ public class CodeGenVisitorComplete implements ASTVisitor, Opcodes {
 		}
 		if (eType == Type.Image) {
 			// Load line number
-			mv.visitLdcInsn(exprHash.e().first().line());
+			mv.visitLdcInsn(exprHash.first().line());
 
 			// Load pos in line
-			mv.visitLdcInsn(exprHash.e().first().posInLine());
+			mv.visitLdcInsn(exprHash.first().posInLine());
 
 			if (exprHash.attr().equals("width")) {
 				mv.visitMethodInsn(INVOKEVIRTUAL, PLPImage.className, "getWidthThrows", PLPImage.getWidthThrowsSig, false);
