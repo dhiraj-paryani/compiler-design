@@ -42,7 +42,8 @@ public class Scanner {
 		public int pos() { return pos; }
 	}
 
-
+	public static final String KIND_CLASS_NAME = "cop5556fa20/Scanner$Kind";
+	public static final String KIND_DESC = "Lcop5556fa20/Scanner$Kind;";
 	public static enum Kind {
 		IDENT, INTLIT, STRINGLIT, CONST,
 		KW_X/* X */,  KW_Y/* Y */, KW_WIDTH/* width */,KW_HEIGHT/* height */,

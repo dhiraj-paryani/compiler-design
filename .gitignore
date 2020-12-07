@@ -28,3 +28,6 @@ hs_err_pid*
 
 out/*
 src/META-INF/*
+
+# bin directory - generated class files 
+bin/*

@@ -70,7 +70,7 @@ public class TypeCheckVisitor implements ASTVisitor {
 
 		if (isKind(op, Kind.LARROW)) {
 			Type t2 = (Type) decImage.source().visit(this, Type.String);
-			assertTypes(first, t2, Type.String);
+			assertTypes(first, t2, Type.String, Type.Image);
 		} else if (isKind(op,Kind.ASSIGN)) {
 			Type t2 = (Type) decImage.source().visit(this, null);
 			assertTypes(first, t2, Type.Image);
