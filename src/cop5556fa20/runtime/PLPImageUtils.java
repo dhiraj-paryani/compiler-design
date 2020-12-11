@@ -38,6 +38,9 @@ public class PLPImageUtils {
 
         if (op == Scanner.Kind.ASSIGN) {
             PLPImage sourceImage = ((PLPImage) source);
+            if (sourceImage == null || sourceImage.image == null) {
+                throw new PLPImage.PLPImageException(line, posLine, "RHS image is null");
+            }
             if (dimension != null) {
                 int sourceWidth = sourceImage.getWidthThrows(line, posLine);
                 int sourceHeight = sourceImage.getHeightThrows(line, posLine);

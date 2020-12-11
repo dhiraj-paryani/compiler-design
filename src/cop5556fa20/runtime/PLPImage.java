@@ -161,7 +161,11 @@ public class PLPImage {
 		int[] pixels = image.getRGB(0, 0, w, h, null, 0, w);
 		int[] otherPixels = other.image.getRGB(0, 0, w, h, null, 0, w);
 		return Arrays.equals(pixels,otherPixels);
-	}        
+	}
+
+	public boolean notEquals(Object obj) {
+		return !equals(obj);
+	}
         	
 
 }

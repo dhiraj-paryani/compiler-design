@@ -147,15 +147,19 @@ public class CodeGenVisitorComplete implements ASTVisitor, Opcodes {
 			case EQ -> {
 				if (exprBinary.e0().type() == Type.Int) {
 					addBooleanJumpLogic(IF_ICMPEQ);
-				} else {
+				} else if (exprBinary.e0().type() == Type.String) {
 					addBooleanJumpLogic(IF_ACMPEQ);
+				} else if (exprBinary.e0().type() == Type.Image) {
+					mv.visitMethodInsn(INVOKEVIRTUAL, PLPImage.className, "equals", "(Ljava/lang/Object;)Z", isInterface);
 				}
 			}
 			case NEQ -> {
 				if (exprBinary.e0().type() == Type.Int) {
 					addBooleanJumpLogic(IF_ICMPNE);
-				} else {
+				} else if (exprBinary.e0().type() == Type.String) {
 					addBooleanJumpLogic(IF_ACMPNE);
+				} else if (exprBinary.e0().type() == Type.Image) {
+					mv.visitMethodInsn(INVOKEVIRTUAL, PLPImage.className, "notEquals", "(Ljava/lang/Object;)Z", isInterface);
 				}
 			}
 			case LT ->
